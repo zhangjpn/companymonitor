@@ -24,4 +24,12 @@
     }
 
 ## 数据库说明
-统计量储存位置spv1.activecompanies
+统计量储存位置spv1.companiesstatistics
+
+
+评论统计：
+        spv1.commentsstatistics
+
+投诉统计：
+        spv1.complaintsstatistics
+

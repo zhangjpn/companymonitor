@@ -1,6 +1,5 @@
 # -*-coding:utf-8 -*-
 
-import json
 import csv
 
 
@@ -43,9 +42,6 @@ class CodeTable(object):
 
         return countylist
 
-
-
-        pass
 
 if __name__ == '__main__':
     with open(file='codetable.csv',mode='r') as f:

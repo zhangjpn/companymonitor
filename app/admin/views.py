@@ -208,7 +208,7 @@ def census_complaints():
 def comments_satisfactions():
     """评价统计中的满意度统计"""
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
-    
+
     # 参数处理
     # 必要参数citycode
     city_code = request.args.get('citycode', '371100')  # 默认值日照市
@@ -227,32 +227,32 @@ def comments_satisfactions():
 
 
     res_data = {
-        'general':{
-            'totalcomments':1000,
-            'goodcomments':800,
-            'satisfactionrate':0.8,
+        'general': {
+            'totalcomments': 1000,
+            'goodcomments': 800,
+            'satisfactionrate': 0.8,
         },
-        'area':{
-            'total':{
-                {'岚山区': {'服务态度':1.1,'评价满意度':0.9},
-                 '东港区': {'服务态度':1.1,'评价满意度':0.9},
-                 '市辖区': {'服务态度':1.1,'评价满意度':0.9},
+        'area': {
+            'total': {
+                {'岚山区': {'服务态度': 1.1, '评价满意度': 0.9},
+                 '东港区': {'服务态度': 1.1, '评价满意度': 0.9},
+                 '市辖区': {'服务态度': 1.1, '评价满意度': 0.9},
                  },
             },
-            'lastweek':{},
-            'lastmonth':{},
-            'lastseason':{},
+            'lastweek': {},
+            'lastmonth': {},
+            'lastseason': {},
         },
-        'trends':{
-            'weekly':{
+        'trends': {
+            'weekly': {
                 {'岚山区': [0.9, 0.4, 0.7],
                  '东港区': [0.9, 0.4, 0.7],
                  '市辖区': [0.9, 0.4, 0.7],
-                 'date':[],
+                 'date': [],
                  },
             },
-            'monthly':{},
-            'seasonly':{},
+            'monthly': {},
+            'seasonly': {},
         },
 
     }

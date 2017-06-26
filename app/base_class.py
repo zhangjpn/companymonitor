@@ -6,30 +6,33 @@ import os.path as path
 base_path = path.dirname(__file__)
 codetable = path.join(base_path, 'codetable.csv')
 
+
 class CodeTable(object):
     """全国区域代码表"""
 
     def __init__(self):
         self.codetable = []
-        with open(file=codetable, mode='r') as f:
-            r = csv.reader(f)
+        with open(file=codetable, mode='r') as codetablefile:
+            r = csv.reader(codetablefile)
             for li in r:
                 self.codetable.append(li)
 
-    def getProvinceCode(self, province_name):
+    def get_province_code(self, province_name):
         pass
 
-    def getProvinceName(self, province_code):
-        pass
-    def getCityCode(self, city_name):
+    def get_province_name(self, province_code):
         pass
 
-    def getCityName(self, city_code):
-        pass
-    def getCountyCode(self, county_name):
+    def get_city_code(self, city_name):
         pass
 
-    def getCountyName(self, county_code):
+    def get_city_name(self, city_code):
+        pass
+
+    def get_county_code(self, county_name):
+        pass
+
+    def get_county_name(self, county_code):
         pass
 
     def get_belong_county_info(self, province_code, city_code):
@@ -47,7 +50,7 @@ class CodeTable(object):
 
 
 if __name__ == '__main__':
-    with open(file='codetable.csv',mode='r') as f:
+    with open(file='codetable.csv', mode='r') as f:
         reader = csv.reader(f)
         for i in reader:
             print(i)

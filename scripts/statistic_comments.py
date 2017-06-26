@@ -128,6 +128,8 @@ def collect_comments(stats_day, citycode):
     cursor = mongo_client.statistics.comments.find({'created': {'$gte': start_of_day, '$lt': end_of_day}},
                                              {'_id': True, 'company': True})
 
+    # 所有统计数据按照周、月、季度进行统计，放到同一个collection中，用某个字段来区分，同时用citycode、countycode、来区分，
+
     # 统计数据入库
     satisfactionInfo = {
         'citycode': '371100',

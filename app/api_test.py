@@ -46,7 +46,7 @@ def active_companies(startdate, enddate, citycode):
     # spv1.activecompanies
 
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
-    active_records = mongo_client.spv1.activecompanies.find({'date': {'$gte': start_date, '$lte': end_date}},
+    active_records = mongo_client.statistics.companiesstatistics.find({'date': {'$gte': start_date, '$lte': end_date}},
                                                             {'date': True, 'activeCompanyIds': True, '_id': False})
 
     # 获取区域代码
@@ -59,7 +59,7 @@ def active_companies(startdate, enddate, citycode):
 
     res_data = []
     # 返回 {'date':{'东港'：1,'xx':4...}}
-    for record in active_records:  # item是{'date':xx,'activeCompanyIds':[{'_id':xx,'provinceCode':'','countyCode':''},{}]}
+    for record in active_records:
         # 对每天每个区域的活跃企业数量做统计
         for k in countylist:  # 计数初始化置成0
             k[2] = 0
@@ -113,7 +113,7 @@ def census_comments(startdate, enddate, citycode):
     # 数据库形式
     # 行：{ 'date':'2017-07-01', 'commentInfo':[{'companyId':'', 'commentId':'','provinceCode':371001,'citycode':,'countycode':},...{}],}
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
-    comments_info = mongo_client.spv1.commentsstatistics.find({'date': {'$gte': start_date, '$lte': end_date}},
+    comments_info = mongo_client.statistics.commentsstatistics.find({'date': {'$gte': start_date, '$lte': end_date}},
                                                            {'date': True, 'commentIds': True, '_id': False})
     # 获取区域代码
     province_code_abbr = city_code[0:2]
@@ -185,7 +185,7 @@ def census_complaints(startdate, enddate, citycode):
     # spv1.complaintsstatistics
 
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
-    active_records = mongo_client.spv1.complaintsstatistics.find({'date': {'$gte': start_date, '$lte': end_date}},
+    active_records = mongo_client.statistics.complaintsstatistics.find({'date': {'$gte': start_date, '$lte': end_date}},
                                                            {'date': True, 'complaintIds': True, '_id': False})
     # 获取区域代码
     province_code_abbr = city_code[0:2]

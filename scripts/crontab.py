@@ -20,7 +20,7 @@ class UTC(tzinfo):
         return timedelta(hours=self._offset)
 
 
-def stats(stats_day):
+def census_companies(stats_day):
     """统计一天的活跃维修企业数
     :param stats_day date 被统计日期
     """
@@ -48,7 +48,7 @@ def stats(stats_day):
 
     print('%s-%s-%s 共 %s 家企业上传了维修记录' % (stats_day.year, stats_day.month, stats_day.day, len(company_ids)))
     # 写入统计数据库
-    mongo_client.spv1.activecompanies.replace_one({'date': record},
+    mongo_client.statistics.companiesstatistics.replace_one({'date': record},
                                                   {'date': record, 'activeCompanyIds': company_info}, upsert=True)
 
 
@@ -85,7 +85,7 @@ def census_comments(stats_day):
 
     print('%s-%s-%s 共 %s 条评价信息' % (stats_day.year, stats_day.month, stats_day.day, len(comments)))
     # 写入统计数据库
-    mongo_client.spv1.commentsstatistics.replace_one({'date': recorded_date},
+    mongo_client.statistics.commentsstatistics.replace_one({'date': recorded_date},
                                                   {'date': recorded_date, 'commentIds': comment_info}, upsert=True)
 
 
@@ -109,7 +109,6 @@ def census_complaints(stats_day):
     complaints_info = []  # 每天的所有投诉信息
     for complaint in complaints:
         # 寻找评论所对应的维修企业信息
-        print(complaint)
         try:
             info = {
                 '_id': complaint.get('_id'),
@@ -122,7 +121,7 @@ def census_complaints(stats_day):
             pass
     print('%s-%s-%s 共 %s 条评价信息' % (stats_day.year, stats_day.month, stats_day.day, len(complaints)))
     # 写入统计数据库
-    mongo_client.spv1.complaintsstatistics.replace_one({'date': recorded_date},
+    mongo_client.statistics.complaintsstatistics.replace_one({'date': recorded_date},
                                                   {'date': recorded_date, 'complaintIds': complaints_info}, upsert=True)
 
 
@@ -130,5 +129,7 @@ if __name__ == '__main__':
     basedate = date(2017, 1, 1)
     delta = timedelta(1)
     for i in range(300):
+        census_companies(basedate)
+        census_comments(basedate)
         census_complaints(basedate)
         basedate += delta

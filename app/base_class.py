@@ -1,14 +1,17 @@
 # -*-coding:utf-8 -*-
 
 import csv
+import os.path as path
 
+base_path = path.dirname(__file__)
+codetable = path.join(base_path, 'codetable.csv')
 
 class CodeTable(object):
     """全国区域代码表"""
 
     def __init__(self):
         self.codetable = []
-        with open(file='codetable.csv', mode='r') as f:
+        with open(file=codetable, mode='r') as f:
             r = csv.reader(f)
             for li in r:
                 self.codetable.append(li)

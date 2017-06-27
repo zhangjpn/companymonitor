@@ -61,6 +61,7 @@ def collect_comments(citycode):
         'periodStart': 'untilnow',
         'periodEnd': 'untilnow',
     }
+    print('*'*30)
     print('全局数据:', general_data)
     # 单个城市满意度评价的总体数据
     mongo_client.statistics.commentsstatistics.replace_one(
@@ -137,7 +138,7 @@ def collect_comments(citycode):
         # 生成按照自然周的时间段
         def in_week(weekperiod, target_date):
             """根据日期判断一个日期是否在日期时间段内"""
-            if weekperiod[0] <= target_date < (weekperiod[1] + timedelta(days=1)):
+            if weekperiod[0]-timedelta(hours=8) <= target_date < (weekperiod[1] + timedelta(days=1)-timedelta(hours=8)):
                 return True
             return False
 
@@ -219,7 +220,7 @@ def collect_comments(citycode):
     for k, v in area_relatived_comments.items():
         def in_month(monthperiod, target_date):
             """根据日期判断一个日期是否在日期时间段内"""
-            if monthperiod[0] <= target_date < (monthperiod[1] + timedelta(days=1)):
+            if monthperiod[0] - timedelta(hours=8) <= target_date < (monthperiod[1] + timedelta(days=1)- timedelta(hours=8)):
                 return True
             return False
 
@@ -303,7 +304,7 @@ def collect_comments(citycode):
         # v辖区内评论列表
         def in_season(seasonperiod, target_date):
             """根据日期判断一个日期是否在日期时间段内"""
-            if seasonperiod[0] <= target_date < (seasonperiod[1] + timedelta(days=1)):
+            if seasonperiod[0]- timedelta(hours=8) <= target_date < (seasonperiod[1] + timedelta(days=1)- timedelta(hours=8)):
                 return True
             return False
 
@@ -382,6 +383,7 @@ def collect_comments(citycode):
 
 
 if __name__ == '__main__':
-    city_codes = CodeTable().get_city_codes()
-    for citycode in city_codes:
-        collect_comments(citycode)
+    # city_codes = CodeTable().get_city_codes()
+    # for citycode in city_codes:
+    #     collect_comments(citycode)
+    collect_comments('371100')

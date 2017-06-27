@@ -5,7 +5,7 @@ from flask import request, jsonify, Blueprint
 from pymongo import MongoClient
 from app.base_class import CodeTable
 from scripts.tz import UTC
-from app.commontools import get_last_month_period, get_last_season_period
+from app.commontools import get_last_month_period, get_last_season_period,get_last_n_month_period,get_last_n_season_period
 
 admin_bp = Blueprint('admin_bp', import_name=__name__)
 
@@ -214,10 +214,9 @@ def comments_satisfactions():
     # 参数处理
     # 必要参数citycode
     city_code = request.args.get('citycode', '371100')  # 默认值日照市
-
     # 整体数据
     general = mongo_client.statistics.commentsstatistics.find_one(
-        {'cityCode': city_code, 'datatype': 0, 'period': 'untilnow'})
+        {'cityCode': city_code, 'datatype': 0, 'periodStart': 'untilnow'})
 
     print(general)
     # 中间区域，全体数据
@@ -228,7 +227,7 @@ def comments_satisfactions():
     # 上一周
 
     bias = calendar.weekday(today.year, today.month, today.day)
-    start_week_day = datetime(today.year, today.month, today.day, tzinfo=UTC(8)) - timedelta(bias + 7)
+    start_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias + 7)
     end_week_day = start_week_day + timedelta(days=6)
 
     week_period = (start_week_day, end_week_day)
@@ -255,30 +254,34 @@ def comments_satisfactions():
     # 获取趋势数据
     # 获取周趋势
     bias = calendar.weekday(today.year, today.month, today.day)
-    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=UTC(8)) - timedelta(bias) - timedelta(6)
-    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=UTC(8)) + timedelta(days=(6 - bias))
+    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias) - timedelta(6)
+    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) + timedelta(days=(6 - bias))
     weekly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
         {'datatype': 2, 'cityCode': city_code, 'periodStart': {'$gte':start_trend_week_day}, 'periodEnd': {'$lte':end_trend_week_day}},
         {'_id': False, 'datatype': False, 'cityCode': False})
     weekly_trends = [w for w in weekly_trend_cursor]
 
     # 获取月趋势
-    bias = calendar.weekday(today.year, today.month, today.day)
-    start_trend_month_day = datetime(today.year, today.month, today.day, tzinfo=UTC(8)) - timedelta(bias) - timedelta(6)
-    end_trend_month_day = datetime(today.year, today.month, today.day, tzinfo=UTC(8)) + timedelta(days=(6 - bias))
+    start_trend_month_day,end_trend_month_day = get_last_n_month_period(today)
     monthly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 2, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
+        {'datatype': 3, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
          'periodEnd': {'$lte': end_trend_month_day}},
         {'_id': False, 'datatype': False, 'cityCode': False})
     monthly_trends = [m for m in monthly_trend_cursor]
 
     # 获取季度趋势
+    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today, n=7)
+    seasonly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'datatype': 4, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_season_day},
+         'periodEnd': {'$lte': end_trend_season_day}},
+        {'_id': False, 'datatype': False, 'cityCode': False})
+    seasonly_trends = [m for m in seasonly_trend_cursor]
 
     res_data = {
         'general': {
-            'commentsNum': general.get('commentsNum'),
-            'satisfiedComments': general.get('satisfiedComments'),
-            'satisfiedRate': general.get('satisfiedRate'),
+            'commentsNum': general.get('commentsNum',0),
+            'satisfiedComments': general.get('satisfiedComments',0),
+            'satisfiedRate': general.get('satisfiedRate',1),
         },
         'area': {
             'total': area_data,
@@ -288,8 +291,8 @@ def comments_satisfactions():
         },
         'trends': {
             'weekly': weekly_trends,
-            'monthly': [],
-            'seasonly': [],
+            'monthly': monthly_trends,
+            'seasonly': seasonly_trends,
         },
 
     }

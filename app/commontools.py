@@ -4,12 +4,14 @@ import calendar
 
 from scripts.tz import UTC
 
+
 def create_week_list(start, end):
     """返回日期段内的周列表"""
     startday = datetime.strptime(start, '%Y-%m-%d')
-    endday = datetime.strptime(end, '%Y-%m-%d')
+    temp = datetime.strptime(end, '%Y-%m-%d')
+    endday = datetime(temp.year,temp.month,temp.day,tzinfo=None)
     bias = calendar.weekday(startday.year, startday.month, startday.day)
-    start_week_day = datetime(startday.year, startday.month, startday.day, tzinfo=UTC(8)) - timedelta(bias)
+    start_week_day = datetime(startday.year, startday.month, startday.day, tzinfo=None) - timedelta(bias)
     week_range_list = []
     end_week_day = start_week_day + timedelta(days=6)
     while True:
@@ -25,9 +27,9 @@ def create_month_list(start, end):
     startday = datetime.strptime(start, '%Y-%m-%d')
     endday = datetime.strptime(end, '%Y-%m-%d')
 
-    start_month_day = datetime(startday.year, startday.month, day=1, tzinfo=UTC(8))
+    start_month_day = datetime(startday.year, startday.month, day=1, tzinfo=None)
     in_next_month = start_month_day + timedelta(days=31)
-    end_month_day = datetime(in_next_month.year, month=in_next_month.month, day=1, tzinfo=UTC(8)) - timedelta(days=1)
+    end_month_day = datetime(in_next_month.year, month=in_next_month.month, day=1, tzinfo=None) - timedelta(days=1)
     month_range_list = []
     while True:
         month_range_list.append((start_month_day, end_month_day))
@@ -35,7 +37,7 @@ def create_month_list(start, end):
             break
         start_month_day = end_month_day + timedelta(days=1)
         tempdate = start_month_day + timedelta(days=31)
-        end_month_day = datetime(tempdate.year, month=tempdate.month, day=1, tzinfo=UTC(8)) - timedelta(days=1)
+        end_month_day = datetime(tempdate.year, month=tempdate.month, day=1, tzinfo=None) - timedelta(days=1)
     return month_range_list
 
 
@@ -46,17 +48,17 @@ def create_season_list(start, end):
 
     # 获取第一季度首日
     if startday.month in [1, 2, 3]:
-        start_season_day = datetime(startday.year, 1, day=1, tzinfo=UTC(8))
+        start_season_day = datetime(startday.year, 1, day=1, tzinfo=None)
     elif startday.month in [4, 5, 6]:
-        start_season_day = datetime(startday.year, 4, day=1, tzinfo=UTC(8))
+        start_season_day = datetime(startday.year, 4, day=1, tzinfo=None)
     elif startday.month in [7, 8, 9]:
-        start_season_day = datetime(startday.year, 7, day=1, tzinfo=UTC(8))
+        start_season_day = datetime(startday.year, 7, day=1, tzinfo=None)
     else:
-        start_season_day = datetime(startday.year, 10, day=1, tzinfo=UTC(8))
+        start_season_day = datetime(startday.year, 10, day=1, tzinfo=None)
 
     # 获取当季度最后一天
     temdate = start_season_day + timedelta(days=93)
-    end_season_day = datetime(temdate.year, temdate.month, 1, tzinfo=UTC(8)) - timedelta(days=1)
+    end_season_day = datetime(temdate.year, temdate.month, 1, tzinfo=None) - timedelta(days=1)
 
     season_range_list = []
     while True:
@@ -65,31 +67,35 @@ def create_season_list(start, end):
             break
         start_season_day = end_season_day + timedelta(days=1)
         tempdate = start_season_day + timedelta(days=93)
-        end_season_day = datetime(tempdate.year, month=tempdate.month, day=1, tzinfo=UTC(8)) - timedelta(days=1)
+        end_season_day = datetime(tempdate.year, month=tempdate.month, day=1, tzinfo=None) - timedelta(days=1)
     return season_range_list
 
 
 def get_last_month_period(theday):
     """获取上个月的日期范围，返回（起始日，结束日）元组"""
     if theday.month == 1:
-        start_month_day = datetime(theday.year - 1, 12, 1, tzinfo=UTC(8))
-        end_month_day = datetime(theday.year, 1, 1, tzinfo=UTC(8)) - timedelta(days=1)
+        start_month_day = datetime(theday.year - 1, 12, 1, tzinfo=None)
+        end_month_day = datetime(theday.year, 1, 1, tzinfo=None) - timedelta(days=1)
     else:
-        start_month_day = datetime(theday.year, theday.month - 1, 1, tzinfo=UTC(8))
-        end_month_day = datetime(theday.year, theday.month, 1, tzinfo=UTC(8)) - timedelta(days=1)
+        start_month_day = datetime(theday.year, theday.month - 1, 1, tzinfo=None)
+        end_month_day = datetime(theday.year, theday.month, 1, tzinfo=None) - timedelta(days=1)
     return start_month_day, end_month_day
+
+
 def get_last_n_month_period(theday, n=7):
     """获取过去n个月的时间段"""
-    if theday.month > n:
+    start = end = theday
+    if theday.month >= n:
+        start = datetime(theday.year, theday.month - n + 1, 1, tzinfo=None)
         if theday.month < 12:
-            start = datetime(theday.year, theday.month - n, 1, tzinfo=UTC(8))
-            end = datetime(theday.year, theday.month + 1,1, tzinfo=UTC(8)) - timedelta(days=1)
-        else:
-            pass
+            end = datetime(theday.year, theday.month + 1, 1, tzinfo=None) - timedelta(days=1)
+        elif theday.month == 12:
+            end = datetime(theday.year, 12, 31, tzinfo=None)
     else:
-        start = datetime(theday.year - 1, 12-theday.month+n,1,tzinfo=UTC(8))
+        start = datetime(theday.year - 1, 12 - n + theday.month, 1, tzinfo=None)
+        end = datetime(theday.year, theday.month + 1, 1, tzinfo=None) - timedelta(days=1)
+    return start, end
 
-    return start,end
 
 def get_last_season_period(today):
     if today.month in [1, 2, 3]:
@@ -102,16 +108,64 @@ def get_last_season_period(today):
         start_season_day = datetime(today.year, 7, day=1)
     # 获取季度最后一天
     if start_season_day.month == 10:
-        end_season_day = datetime(start_season_day.year, 12, 31, tzinfo=UTC(8))
+        end_season_day = datetime(start_season_day.year, 12, 31, tzinfo=None)
     elif start_season_day.month == 1:
-        end_season_day = datetime(start_season_day.year, 3, 31, tzinfo=UTC(8))
+        end_season_day = datetime(start_season_day.year, 3, 31, tzinfo=None)
     elif start_season_day.month == 4:
-        end_season_day = datetime(start_season_day.year, 6, 30, tzinfo=UTC(8))
+        end_season_day = datetime(start_season_day.year, 6, 30, tzinfo=None)
     else:
-        end_season_day = datetime(start_season_day.year, 9, 30, tzinfo=UTC(8))
+        end_season_day = datetime(start_season_day.year, 9, 30, tzinfo=None)
     return start_season_day, end_season_day
+
+
+def get_last_n_season_period(theday, n=7):
+    """获取过去n个季度的时间段，返回起始时间和结束时间"""
+    # 获取本季度首日日期
+    if theday.month in [1, 2, 3]:
+        l = [4, 1, 10, 7]
+        mon = l[n % 4]
+        if n > 1:
+            deltayear = n // 6 + 1
+        else:
+            deltayear = 0
+        start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
+        end_season_day = datetime(theday.year, 3, day=31, tzinfo=None)
+    elif theday.month in [4, 5, 6]:
+        l = [7, 4, 1,10]
+        mon = l[n % 4]
+        if n > 2:
+            deltayear = (n - 1) // 6 + 1
+        else:
+            deltayear = 0
+        start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
+        end_season_day = datetime(theday.year, 6, day=30, tzinfo=None)
+
+    elif theday.month in [7, 8, 9]:
+        l = [10, 7, 4, 1]
+        mon = l[n % 4]
+        if n > 3:
+            deltayear = (n - 2) // 6 + 1
+        else:
+            deltayear = 0
+        start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
+        end_season_day = datetime(theday.year, 9, day=30, tzinfo=None)
+    else:
+        l = [1, 10,7, 4]
+        mon = l[n % 4]
+        if n > 4:
+            deltayear = (n - 3) // 6 + 1
+        else:
+            deltayear = 0
+        start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
+        end_season_day = datetime(theday.year, 12, day=31, tzinfo=None)
+    return start_season_day, end_season_day
+
 
 if __name__ == '__main__':
     # create_season_list('2016-06-09', '2017-07-04')
-    a,b = get_last_month_period(datetime.now())
-    print(a,b)
+    # a, b = get_last_month_period(datetime.now())
+    # print(a, b)
+    today = datetime.today()
+    # theday = datetime.date(datetime(2017, 12, 31))
+    # get_last_n_season_period(today, n=7)
+    get_last_n_month_period(today)

@@ -28,7 +28,12 @@ class CodeTable(object):
 
     def get_city_name(self, city_code):
         pass
-
+    def get_city_codes(self):
+        """返回所有的城市代码"""
+        city_codes = []
+        for li in self.codetable:
+            city_codes.append(li[1] + li[3] + '00')
+        return city_codes
     def get_county_code(self, county_name):
         pass
 

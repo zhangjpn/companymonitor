@@ -49,7 +49,7 @@ class CodeTable(object):
         countylist = []
         for li in self.codetable:
             if province_code == li[1] and city_code == li[3]:
-                countylist.append([li[4], li[1] + li[3] + li[5], 0])
+                countylist.append([li[4], li[1] + li[3] + li[5]])
 
         return countylist
 

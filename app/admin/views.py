@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from flask import request, jsonify, Blueprint
 from pymongo import MongoClient
 from app.base_class import CodeTable
-from scripts.tz import UTC
-from app.commontools import get_last_month_period, get_last_season_period,get_last_n_month_period,get_last_n_season_period
+from app.commontools import get_last_month_period, get_last_season_period, get_last_n_month_period, \
+    get_last_n_season_period
 
 admin_bp = Blueprint('admin_bp', import_name=__name__)
 
@@ -148,6 +148,343 @@ def census_comments():
     return jsonify({'code': '200', 'rows': rows}), 200
 
 
+@admin_bp.route(r'/commonapi/admin/statistics/comments/satisfaction', methods=['GET'])
+def comments_satisfactions():
+    """评价统计中的满意度统计"""
+    mongo_client = MongoClient(host='127.0.0.1', port=27017)
+    today = datetime.today()
+    # 参数处理
+    # 必要参数citycode
+    city_code = request.args.get('citycode', '371100')  # 默认值日照市
+    # 整体数据
+    general = mongo_client.statistics.commentsstatistics.find_one(
+        {'cityCode': city_code, 'dataType': 0, 'periodStart': 'untilnow'})
+
+    print(general)
+    # 中间区域，全体数据
+    history_total = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 1, 'cityCode': city_code, 'period': 'untilnow', },
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    area_data = [i for i in history_total]
+    # 上一周
+
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias + 7)
+    end_week_day = start_week_day + timedelta(days=6)
+
+    week_period = (start_week_day, end_week_day)
+    format_period = week_period[0].strftime('%Y-%m-%d') + '-' + week_period[1].strftime('%Y-%m-%d')
+    week_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 2, 'cityCode': city_code, 'period': format_period, },
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    lastweek = [d for d in week_cursor]
+
+    # 上一月
+    start_last_month, end_last_month = get_last_month_period(today)
+    month_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 3, 'cityCode': city_code, 'period': start_last_month.strftime('%Y-%m'), },
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    lastmonth = [m for m in month_cursor]
+
+    # 上一季度
+    start_season_day, end_season_day = get_last_season_period(today)
+    season_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 4, 'cityCode': city_code, 'periodStart': start_season_day, 'periodEnd': end_season_day},
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    lastseason = [s for s in season_cursor]
+
+    # 获取趋势数据
+    # 获取周趋势
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias) - timedelta(6)
+    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) + timedelta(days=(6 - bias))
+    weekly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 2, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_week_day},
+         'periodEnd': {'$lte': end_trend_week_day}},
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    weekly_trends = [w for w in weekly_trend_cursor]
+
+    # 获取月趋势
+    start_trend_month_day, end_trend_month_day = get_last_n_month_period(today)
+    monthly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 3, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
+         'periodEnd': {'$lte': end_trend_month_day}},
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    monthly_trends = [m for m in monthly_trend_cursor]
+
+    # 获取季度趋势
+    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today, n=7)
+    seasonly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 4, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_season_day},
+         'periodEnd': {'$lte': end_trend_season_day}},
+        {'_id': False, 'dataType': False, 'cityCode': False})
+    seasonly_trends = [m for m in seasonly_trend_cursor]
+
+    res_data = {
+        'general': {
+            'commentsNum': general.get('commentsNum', 0),
+            'satisfiedComments': general.get('satisfiedComments', 0),
+            'satisfiedRate': general.get('satisfiedRate', 1),
+        },
+        'area': {
+            'total': area_data,
+            'lastweek': lastweek,
+            'lastmonth': lastmonth,
+            'lastseason': lastseason,
+        },
+        'trends': {
+            'weekly': weekly_trends,
+            'monthly': monthly_trends,
+            'seasonly': seasonly_trends,
+        },
+
+    }
+    return jsonify(res_data), 200
+
+
+@admin_bp.route(r'/commonapi/admin/statistics/comments/repairtype', methods=['GET'])
+def comments_repairtype():
+    """根据维修类别统计评价数"""
+    mongo_client = MongoClient(host='127.0.0.1', port=27017)
+    today = datetime.today()
+    default_time = datetime(2000, 1, 1)
+    # 参数处理
+    city_code = request.args.get('citycode', '371100')  # 默认值日照市
+
+    # 中间区域，全体数据
+    history_total = mongo_client.statistics.commentsstatistics.find(
+        {'statsType': 2, 'dataType': 1, 'cityCode': city_code, 'periodStart': default_time,
+         'periodEnd': default_time},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    totaldata = []
+    for w in history_total:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        totaldata.append(w)
+
+    # 上一周
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias + 7)
+    end_week_day = start_week_day + timedelta(days=6)
+
+    week_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'periodStart': start_week_day, 'periodEnd': end_week_day, 'statsType': 2, 'dataType': 2,
+         'cityCode': city_code},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastweek = []
+    for w in week_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastweek.append(w)
+
+    # 上一月
+    start_last_month, end_last_month = get_last_month_period(today)
+    month_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'cityCode': city_code, 'statsType': 2, 'periodStart': start_last_month, 'periodEnd': end_last_month,
+         'dataType': 3},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastmonth = []
+    for w in month_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastmonth.append(w)
+
+    # 上一季度
+    start_season_day, end_season_day = get_last_season_period(today)
+    season_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'statsType': 2, 'dataType': 4, 'cityCode': city_code, 'periodStart': start_season_day,
+         'periodEnd': end_season_day},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastseason = []
+    for w in season_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastseason.append(w)
+
+    # 获取趋势数据
+    # 获取周趋势
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias) - timedelta(
+        6 * 7)
+    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) + timedelta(days=(6 - bias))
+
+    weekly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 2, 'statsType': 2, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_week_day},
+         'periodEnd': {'$lte': end_trend_week_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    weekly_trends = []
+    for w in weekly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        weekly_trends.append(w)
+
+    # 获取月趋势
+    start_trend_month_day, end_trend_month_day = get_last_n_month_period(today)
+    monthly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 3, 'statsType': 2, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
+         'periodEnd': {'$lte': end_trend_month_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    monthly_trends = []
+    for w in monthly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        monthly_trends.append(w)
+
+    # 获取季度趋势
+    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today)
+    seasonly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 4, 'statsType': 2, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_season_day},
+         'periodEnd': {'$lte': end_trend_season_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+
+    seasonly_trends = []
+    for w in seasonly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        seasonly_trends.append(w)
+
+    res_data = {
+        'section': {
+            'total': totaldata,
+            'lastweek': lastweek,
+            'lastmonth': lastmonth,
+            'lastseason': lastseason,
+        },
+        'trends': {
+            'weekly': weekly_trends,
+            'monthly': monthly_trends,
+            'seasonly': seasonly_trends,
+        },
+    }
+    return jsonify(res_data), 200
+
+
+@admin_bp.route(r'/commonapi/admin/statistics/comments/<dtype>', methods=['GET'])
+def comments_vehicletype(dtype):
+    """根据维修类别统计评价数"""
+    request_api = {
+        'satisfaction': 1,
+        'repairtype': 2,
+        'vehicletype': 3,
+        'category': 4,
+    }
+    if dtype not in request_api:
+        return jsonify({'code': 404}), 404
+    stat_type = request_api[dtype]
+    mongo_client = MongoClient(host='127.0.0.1', port=27017)
+    today = datetime.today()
+    default_time = datetime(2000, 1, 1)
+    # 参数处理
+    city_code = request.args.get('citycode', '371100')  # 默认值日照市
+
+    # 中间区域，全体数据
+    history_total = mongo_client.statistics.commentsstatistics.find(
+        {'statsType': stat_type, 'dataType': 1, 'cityCode': city_code, 'periodStart': default_time,
+         'periodEnd': default_time},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    totaldata = []
+    for w in history_total:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        totaldata.append(w)
+
+    # 上一周
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias + 7)
+    end_week_day = start_week_day + timedelta(days=6)
+
+    week_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'periodStart': start_week_day, 'periodEnd': end_week_day, 'statsType': stat_type, 'dataType': 2,
+         'cityCode': city_code},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastweek = []
+    for w in week_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastweek.append(w)
+
+    # 上一月
+    start_last_month, end_last_month = get_last_month_period(today)
+    month_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'cityCode': city_code, 'statsType': stat_type, 'periodStart': start_last_month, 'periodEnd': end_last_month,
+         'dataType': 3},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastmonth = []
+    for w in month_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastmonth.append(w)
+
+    # 上一季度
+    start_season_day, end_season_day = get_last_season_period(today)
+    season_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'statsType': stat_type, 'dataType': 4, 'cityCode': city_code, 'periodStart': start_season_day,
+         'periodEnd': end_season_day},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    lastseason = []
+    for w in season_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        lastseason.append(w)
+
+    # 获取趋势数据
+    # 获取周趋势
+    bias = calendar.weekday(today.year, today.month, today.day)
+    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias) - timedelta(
+        6 * 7)
+    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) + timedelta(days=(6 - bias))
+
+    weekly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 2, 'statsType': stat_type, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_week_day},
+         'periodEnd': {'$lte': end_trend_week_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    weekly_trends = []
+    for w in weekly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        weekly_trends.append(w)
+
+    # 获取月趋势
+    start_trend_month_day, end_trend_month_day = get_last_n_month_period(today)
+    monthly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 3, 'statsType': stat_type, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
+         'periodEnd': {'$lte': end_trend_month_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+    monthly_trends = []
+    for w in monthly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        monthly_trends.append(w)
+
+    # 获取季度趋势
+    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today)
+    seasonly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
+        {'dataType': 4, 'statsType': stat_type, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_season_day},
+         'periodEnd': {'$lte': end_trend_season_day}},
+        {'_id': False, 'dataType': False, 'statsType': False})
+
+    seasonly_trends = []
+    for w in seasonly_trend_cursor:
+        w['periodStart'] = w.get('periodStart').isoformat()
+        w['periodEnd'] = w.get('periodEnd').isoformat()
+        seasonly_trends.append(w)
+
+    res_data = {
+        'section': {
+            'total': totaldata,
+            'lastweek': lastweek,
+            'lastmonth': lastmonth,
+            'lastseason': lastseason,
+        },
+        'trends': {
+            'weekly': weekly_trends,
+            'monthly': monthly_trends,
+            'seasonly': seasonly_trends,
+        },
+    }
+    return jsonify(res_data), 200
+
+
 @admin_bp.route(r'/commonapi/admin/statistics/complaints', methods=['GET'])
 def census_complaints():
     """统计一段时间内各辖区的投诉量"""
@@ -204,96 +541,3 @@ def census_complaints():
     #     final_data[county[0]] = temp_li
 
     return jsonify({'code': '200', 'rows': rows}), 200
-
-
-@admin_bp.route(r'/commonapi/admin/statistics/comments/satisfaction', methods=['GET'])
-def comments_satisfactions():
-    """评价统计中的满意度统计"""
-    mongo_client = MongoClient(host='127.0.0.1', port=27017)
-    today = datetime.today()
-    # 参数处理
-    # 必要参数citycode
-    city_code = request.args.get('citycode', '371100')  # 默认值日照市
-    # 整体数据
-    general = mongo_client.statistics.commentsstatistics.find_one(
-        {'cityCode': city_code, 'datatype': 0, 'periodStart': 'untilnow'})
-
-    print(general)
-    # 中间区域，全体数据
-    history_total = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 1, 'cityCode': city_code, 'period': 'untilnow', },
-        {'_id': False, 'periodStart': False, 'periodEnd':False, 'datatype': False, 'cityCode': False})
-    area_data = [i for i in history_total]
-    # 上一周
-
-    bias = calendar.weekday(today.year, today.month, today.day)
-    start_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias + 7)
-    end_week_day = start_week_day + timedelta(days=6)
-
-    week_period = (start_week_day, end_week_day)
-    format_period = week_period[0].strftime('%Y-%m-%d') + '-' + week_period[1].strftime('%Y-%m-%d')
-    week_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 2, 'cityCode': city_code, 'period': format_period, },
-        {'_id': False, 'periodStart': False, 'periodEnd':False, 'datatype': False, 'cityCode': False})
-    lastweek = [d for d in week_cursor]
-
-    # 上一月
-    start_last_month, end_last_month = get_last_month_period(today)
-    month_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 3, 'cityCode': city_code, 'period': start_last_month.strftime('%Y-%m'), },
-        {'_id': False, 'periodStart': False, 'periodEnd':False,'datatype': False, 'cityCode': False})
-    lastmonth = [m for m in month_cursor]
-
-    # 上一季度
-    start_season_day, end_season_day = get_last_season_period(today)
-    season_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 4, 'cityCode': city_code, 'periodStart': start_season_day, 'periodEnd': end_season_day},
-        {'_id': False, 'periodStart': False, 'periodEnd': False, 'datatype': False, 'cityCode': False})
-    lastseason = [s for s in season_cursor]
-
-    # 获取趋势数据
-    # 获取周趋势
-    bias = calendar.weekday(today.year, today.month, today.day)
-    start_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) - timedelta(bias) - timedelta(6)
-    end_trend_week_day = datetime(today.year, today.month, today.day, tzinfo=None) + timedelta(days=(6 - bias))
-    weekly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 2, 'cityCode': city_code, 'periodStart': {'$gte':start_trend_week_day}, 'periodEnd': {'$lte':end_trend_week_day}},
-        {'_id': False, 'datatype': False, 'cityCode': False})
-    weekly_trends = [w for w in weekly_trend_cursor]
-
-    # 获取月趋势
-    start_trend_month_day,end_trend_month_day = get_last_n_month_period(today)
-    monthly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 3, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_month_day},
-         'periodEnd': {'$lte': end_trend_month_day}},
-        {'_id': False, 'datatype': False, 'cityCode': False})
-    monthly_trends = [m for m in monthly_trend_cursor]
-
-    # 获取季度趋势
-    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today, n=7)
-    seasonly_trend_cursor = mongo_client.statistics.commentsstatistics.find(
-        {'datatype': 4, 'cityCode': city_code, 'periodStart': {'$gte': start_trend_season_day},
-         'periodEnd': {'$lte': end_trend_season_day}},
-        {'_id': False, 'datatype': False, 'cityCode': False})
-    seasonly_trends = [m for m in seasonly_trend_cursor]
-
-    res_data = {
-        'general': {
-            'commentsNum': general.get('commentsNum',0),
-            'satisfiedComments': general.get('satisfiedComments',0),
-            'satisfiedRate': general.get('satisfiedRate',1),
-        },
-        'area': {
-            'total': area_data,
-            'lastweek': lastweek,
-            'lastmonth': lastmonth,
-            'lastseason': lastseason,
-        },
-        'trends': {
-            'weekly': weekly_trends,
-            'monthly': monthly_trends,
-            'seasonly': seasonly_trends,
-        },
-
-    }
-    return jsonify(res_data), 200

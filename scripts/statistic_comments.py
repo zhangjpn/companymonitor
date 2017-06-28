@@ -31,7 +31,7 @@ def collect_comments(citycode):
     target_comments = []
     comments_count = 0
     for comment in comments:  # 需要重写
-        relatived_company = mongo_client.spv1.companies.find_one(comment.get('company'))
+        relatived_company = mongo_client.spv1.companies.find_one({'_id': comment.get('company')})
         _city_code = str(int(relatived_company.get('cityCode', 0)))
         _county_code = str(int(relatived_company.get('countyCode', 0)))
         _province_code = str(int(relatived_company.get('provinceCode', 0)))
@@ -61,12 +61,13 @@ def collect_comments(citycode):
         'periodStart': 'untilnow',
         'periodEnd': 'untilnow',
     }
-    print('*'*30)
     print('全局数据:', general_data)
     # 单个城市满意度评价的总体数据
     mongo_client.statistics.commentsstatistics.replace_one(
         {'datatype': 0, 'cityCode': citycode, 'periodStart': 'untilnow'},
         general_data, upsert=True)
+
+
     # 按照分区统计满意度数据
     province_code_abbr = citycode[0:2]
     city_code_abbr = citycode[2:4]

@@ -75,7 +75,7 @@ def get_last_month_period(theday):
     """获取上个月的日期范围，返回（起始日，结束日）元组"""
     if theday.month == 1:
         start_month_day = datetime(theday.year - 1, 12, 1, tzinfo=None)
-        end_month_day = datetime(theday.year, 1, 1, tzinfo=None) - timedelta(days=1)
+        end_month_day = datetime(theday.year - 1, 12, 31, tzinfo=None)
     else:
         start_month_day = datetime(theday.year, theday.month - 1, 1, tzinfo=None)
         end_month_day = datetime(theday.year, theday.month, 1, tzinfo=None) - timedelta(days=1)
@@ -85,14 +85,14 @@ def get_last_month_period(theday):
 def get_last_n_month_period(theday, n=7):
     """获取过去n个月的时间段"""
     start = end = theday
-    if theday.month >= n:
+    if theday.month > n:
         start = datetime(theday.year, theday.month - n + 1, 1, tzinfo=None)
         if theday.month < 12:
             end = datetime(theday.year, theday.month + 1, 1, tzinfo=None) - timedelta(days=1)
         elif theday.month == 12:
             end = datetime(theday.year, 12, 31, tzinfo=None)
     else:
-        start = datetime(theday.year - 1, 12 - n + theday.month, 1, tzinfo=None)
+        start = datetime(theday.year - 1, 12 - n + theday.month + 1, 1, tzinfo=None)
         end = datetime(theday.year, theday.month + 1, 1, tzinfo=None) - timedelta(days=1)
     return start, end
 
@@ -150,7 +150,7 @@ def get_last_n_season_period(theday, n=7):
         start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
         end_season_day = datetime(theday.year, 9, day=30, tzinfo=None)
     else:
-        l = [1, 10,7, 4]
+        l = [1, 10, 7, 4]
         mon = l[n % 4]
         if n > 4:
             deltayear = (n - 3) // 6 + 1
@@ -167,5 +167,6 @@ if __name__ == '__main__':
     # print(a, b)
     today = datetime.today()
     # theday = datetime.date(datetime(2017, 12, 31))
-    # get_last_n_season_period(today, n=7)
-    get_last_n_month_period(today)
+    s,v = get_last_n_season_period(today, n=7)
+    print(s,v)
+    # get_last_n_month_period(today)

@@ -15,7 +15,6 @@ def statistics_vehicletype(citycode):
     # 获取某个城市的评价
     comments = mongo_client.spv1.comments.find({'status': 1})
     target_comments = []
-    comments_count = 0
     for comment in comments:  # 需要重写
         relatived_company = mongo_client.spv1.companies.find_one({'_id': comment.get('company')})
         relatived_maintenace = mongo_client.spv1.maintenaces.find_one({'_id': comment.get('maintenace')})
@@ -29,7 +28,6 @@ def statistics_vehicletype(citycode):
             comment['countyCode'] = _county_code
             comment['vehicleType'] = _vehicle_type
             target_comments.append(comment)
-            comments_count += 1
 
     # 获取车辆类型列表
     vehicletypelist = [
@@ -68,7 +66,7 @@ def statistics_vehicletype(citycode):
                 'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                 'cityCode': citycode,
                 'dataType': 1,  # 文档类型: 1-全部数据 2-周统计 3-月统计 4-季度统计
-                'repairType': k[1],  # 车辆类型代码 2位数字
+                'vehicleType': k[1],  # 车辆类型代码 2位数字
                 'serviceScore': round(service_score / c_count, 1),  # 服务态度
                 'priceScore': round(price_score / c_count, 1),  # 维修价格
                 'qualityScore': round(quality_score / c_count, 1),  # 服务质量
@@ -76,7 +74,9 @@ def statistics_vehicletype(citycode):
                 'efficiencyScore': round(efficiency_score / c_count, 1),  # 维修效率
                 'allComment': round(temp_count / c_count, 3),  # 评价满意度
                 'periodStart': default_time,
-                'periodEnd': default_time
+                'periodEnd': default_time,
+                'commentsNum': c_count,
+                'satisfiedComments': temp_count,
 
             }
 
@@ -85,7 +85,7 @@ def statistics_vehicletype(citycode):
                 'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                 'cityCode': citycode,
                 'dataType': 1,  # 文档类型: 1-全部数据 2-周统计 3-月统计 4-季度统计
-                'repairType': k[1],  # 车辆类型代码 2位数字
+                'vehicleType': k[1],  # 车辆类型代码 2位数字
                 'serviceScore': 0,  # 服务态度
                 'priceScore': 0,  # 维修价格
                 'qualityScore': 0,  # 服务质量
@@ -93,11 +93,13 @@ def statistics_vehicletype(citycode):
                 'efficiencyScore': 0,  # 维修效率
                 'allComment': 0,  # 评价满意度
                 'periodStart': default_time,
-                'periodEnd': default_time
+                'periodEnd': default_time,
+                'commentsNum': 0,
+                'satisfiedComments': 0,
             }
         print('车辆类型全部数据', total_data)
         mongo_client.statistics.commentsstatistics.replace_one(
-            {'statsType': 3, 'dataType': 1, 'repairType': k[1], 'cityCode': citycode, 'periodStart': default_time,
+            {'statsType': 3, 'dataType': 1, 'vehicleType': k[1], 'cityCode': citycode, 'periodStart': default_time,
              'periodEnd': default_time},
             total_data, upsert=True)
 
@@ -119,7 +121,7 @@ def statistics_vehicletype(citycode):
                     'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                     'cityCode': citycode,
                     'dataType': 2,  # 周期类型: 1-全部数据 2-周统计 3-月统计 4-季度统计
-                    'repairType': k[1],  # 车辆类型代码 2位数字
+                    'vehicleType': k[1],  # 车辆类型代码 2位数字
                     'serviceScore': 0,  # 服务态度
                     'priceScore': 0,  # 维修价格
                     'qualityScore': 0,  # 服务质量
@@ -128,11 +130,13 @@ def statistics_vehicletype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': week[0],  # 时期
                     'periodEnd': week[1],  # 时期
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照周统计：', weekly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
                     {'cityCode': citycode, 'statsType': 3, 'periodStart': week[0], 'periodEnd': week[1], 'dataType': 2,
-                     'repairType': k[1]},
+                     'vehicleType': k[1]},
                     weekly_data, upsert=True)
         else:
             for week in weeks:
@@ -159,7 +163,7 @@ def statistics_vehicletype(citycode):
                     weekly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 2,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': round(weekly_service_score / count, 1),  # 服务态度
                         'priceScore': round(weekly_price_score / count, 1),  # 维修价格
@@ -169,12 +173,14 @@ def statistics_vehicletype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': week[0],  # 时期
                         'periodEnd': week[1],  # 时期
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     weekly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 2,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': 0,  # 服务态度
                         'priceScore': 0,  # 维修价格
@@ -184,10 +190,12 @@ def statistics_vehicletype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': week[0],  # 时期
                         'periodEnd': week[1],  # 时期
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 print('按照周统计：', weekly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
-                    {'periodStart': week[0], 'periodEnd': week[1], 'statsType': 3, 'dataType': 2, 'repairType': k[1],
+                    {'periodStart': week[0], 'periodEnd': week[1], 'statsType': 3, 'dataType': 2, 'vehicleType': k[1],
                      'cityCode': citycode},
                     weekly_data, upsert=True)
 
@@ -207,7 +215,7 @@ def statistics_vehicletype(citycode):
                 monthly_data = {
                     'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                     'dataType': 3,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                    'repairType': k[1],  # 车辆类型代码 2位数字
+                    'vehicleType': k[1],  # 车辆类型代码 2位数字
                     'cityCode': citycode,
                     'serviceScore': 0,  # 服务态度
                     'priceScore': 0,  # 维修价格
@@ -217,11 +225,13 @@ def statistics_vehicletype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': month[0],  # 时期 用每月第一天表示
                     'periodEnd': month[1],
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照月统计：', monthly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
                     {'cityCode': citycode, 'statsType': 3, 'periodStart': month[0], 'periodEnd': month[1],
-                     'dataType': 3, 'repairType': k[1]},
+                     'dataType': 3, 'vehicleType': k[1]},
                     monthly_data, upsert=True)
         else:
             # 按照月统计
@@ -248,7 +258,7 @@ def statistics_vehicletype(citycode):
                     monthly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 3,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': round(monthly_service_score / count, 1),  # 服务态度
                         'priceScore': round(monthly_price_score / count, 1),  # 维修价格
@@ -258,12 +268,14 @@ def statistics_vehicletype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': month[0],  # 时期 用每月第一天表示
                         'periodEnd': month[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     monthly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 3,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': 0,  # 服务态度
                         'priceScore': 0,  # 维修价格
@@ -273,11 +285,13 @@ def statistics_vehicletype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': month[0],  # 时期 用每月第一天表示
                         'periodEnd': month[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 print('按照月统计：', monthly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
                     {'statsType': 3, 'cityCode': citycode, 'periodStart': month[0], 'periodEnd': month[1],
-                     'dataType': 3, 'repairType': k[1]},
+                     'dataType': 3, 'vehicleType': k[1]},
                     monthly_data, upsert=True)
 
     # 按照季度统计
@@ -296,7 +310,7 @@ def statistics_vehicletype(citycode):
                 seasonly_data = {  # 全部数据
                     'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                     'dataType': 4,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                    'repairType': k[1],  # 车辆类型代码 2位数字
+                    'vehicleType': k[1],  # 车辆类型代码 2位数字
                     'cityCode': citycode,
                     'serviceScore': 0,  # 服务态度
                     'priceScore': 0,  # 维修价格
@@ -306,11 +320,13 @@ def statistics_vehicletype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': season[0],  # 时期 用每月第一天表示
                     'periodEnd': season[1],
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照季度统计：', seasonly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
                     {'statsType': 3, 'cityCode': citycode, 'periodStart': season[0], 'periodEnd': season[1],
-                     'dataType': 4, 'repairType': k[1]},
+                     'dataType': 4, 'vehicleType': k[1]},
                     seasonly_data, upsert=True)
         else:
             for season in seasons:  # 分季度
@@ -337,7 +353,7 @@ def statistics_vehicletype(citycode):
                     seasonly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 4,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': round(seasonly_service_score / count, 1),  # 服务态度
                         'priceScore': round(seasonly_price_score / count, 1),  # 维修价格
@@ -347,12 +363,14 @@ def statistics_vehicletype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': season[0],  # 时期
                         'periodEnd': season[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     seasonly_data = {
                         'statsType': 3,  # 统计类型 1-满意度 2-车辆类型 3-车辆类型 4-经营类别 5-车辆品牌
                         'dataType': 4,  # 周期类型:1-全部数据 2-周统计 3-月统计 4-季度统计
-                        'repairType': k[1],  # 车辆类型代码 2位数字
+                        'vehicleType': k[1],  # 车辆类型代码 2位数字
                         'cityCode': citycode,
                         'serviceScore': 0,  # 服务态度
                         'priceScore': 0,  # 维修价格
@@ -362,11 +380,13 @@ def statistics_vehicletype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': season[0],  # 时期
                         'periodEnd': season[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 print('按照季度统计：', seasonly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
                     {'statsType': 3, 'cityCode': citycode, 'periodStart': season[0], 'periodEnd': season[1],
-                     'dataType': 4, 'repairType': k[1]},
+                     'dataType': 4, 'vehicleType': k[1]},
                     seasonly_data, upsert=True)
 
 

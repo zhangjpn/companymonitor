@@ -15,7 +15,6 @@ def statistics_repairtype(citycode):
     # 获取某个城市的评价
     comments = mongo_client.spv1.comments.find({'status': 1})
     target_comments = []
-    comments_count = 0
     for comment in comments:  # 需要重写
         relatived_company = mongo_client.spv1.companies.find_one({'_id': comment.get('company')})
         _city_code = str(int(relatived_company.get('cityCode', 0)))
@@ -26,7 +25,6 @@ def statistics_repairtype(citycode):
             comment['cityCode'] = _city_code
             comment['countyCode'] = _county_code
             target_comments.append(comment)
-            comments_count += 1
 
     # 获取维修类别列表
     repairtypelist = [
@@ -76,8 +74,9 @@ def statistics_repairtype(citycode):
                 'efficiencyScore': round(efficiency_score / c_count, 1),  # 维修效率
                 'allComment': round(temp_count / c_count, 3),  # 评价满意度
                 'periodStart': default_time,
-                'periodEnd': default_time
-
+                'periodEnd': default_time,
+                'commentsNum': c_count,
+                'satisfiedComments': temp_count,
             }
 
         else:
@@ -93,7 +92,9 @@ def statistics_repairtype(citycode):
                 'efficiencyScore': 0,  # 维修效率
                 'allComment': 0,  # 评价满意度
                 'periodStart': default_time,
-                'periodEnd': default_time
+                'periodEnd': default_time,
+                'commentsNum': 0,
+                'satisfiedComments': 0,
             }
         print('维修类别全部数据', area_data)
         mongo_client.statistics.commentsstatistics.replace_one(
@@ -128,6 +129,8 @@ def statistics_repairtype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': week[0],  # 时期
                     'periodEnd': week[1],  # 时期
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照周统计：', weekly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
@@ -169,6 +172,8 @@ def statistics_repairtype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': week[0],  # 时期
                         'periodEnd': week[1],  # 时期
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     weekly_data = {
@@ -184,6 +189,9 @@ def statistics_repairtype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': week[0],  # 时期
                         'periodEnd': week[1],  # 时期
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
+
                     }
                 print('按照自然周统计：', weekly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
@@ -217,6 +225,8 @@ def statistics_repairtype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': month[0],  # 时期 用每月第一天表示
                     'periodEnd': month[1],
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照自然月统计：', monthly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
@@ -258,6 +268,8 @@ def statistics_repairtype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': month[0],  # 时期 用每月第一天表示
                         'periodEnd': month[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     monthly_data = {
@@ -273,6 +285,8 @@ def statistics_repairtype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': month[0],  # 时期 用每月第一天表示
                         'periodEnd': month[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 print('按照自然月统计：', monthly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
@@ -306,6 +320,8 @@ def statistics_repairtype(citycode):
                     'allComment': 0,  # 评价满意度
                     'periodStart': season[0],  # 时期 用每月第一天表示
                     'periodEnd': season[1],
+                    'commentsNum': 0,
+                    'satisfiedComments': 0,
                 }
                 print('按照季度统计：', seasonly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(
@@ -347,6 +363,8 @@ def statistics_repairtype(citycode):
                         'allComment': round(satisfied_count / count, 3),  # 评价满意度
                         'periodStart': season[0],  # 时期
                         'periodEnd': season[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 else:
                     seasonly_data = {
@@ -362,6 +380,8 @@ def statistics_repairtype(citycode):
                         'allComment': 0,  # 评价满意度
                         'periodStart': season[0],  # 时期
                         'periodEnd': season[1],
+                        'commentsNum': count,
+                        'satisfiedComments': satisfied_count,
                     }
                 print('按照季度统计：', seasonly_data)
                 mongo_client.statistics.commentsstatistics.replace_one(

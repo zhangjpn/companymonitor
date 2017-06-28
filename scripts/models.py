@@ -16,7 +16,9 @@ class CommentsStatistics(Document):
     cityCode = StringField(required=True)  # 城市编号
     countyCode = StringField(default=None)  # 辖区编号
     dataType = IntField(required=True)  # 周期类型: 1-全部数据 2-周统计 3-月统计 4-季度统计
-    repairType = IntField(required=True)  # 维修类别
+    repairType = IntField(default=None)  # 维修类别
+    vehicleType = IntField(default=None)  # 车辆类型
+    category = IntField(default=None)  # 企业经营类别
     serviceScore = FloatField(default=0)  # 服务态度
     priceScore = FloatField(default=0)  # 维修价格
     qualityScore = FloatField(default=0)  # 服务质量

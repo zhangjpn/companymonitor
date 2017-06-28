@@ -50,12 +50,22 @@ class CodeTable(object):
         for li in self.codetable:
             if province_code == li[1] and city_code == li[3]:
                 countylist.append([li[4], li[1] + li[3] + li[5]])
-
         return countylist
 
+    def varify_citycode(self, citycode):
+        if not isinstance(citycode, str):
+            return False
+        codelist = []
+        for i in self.codetable:
+            codelist.append(i[1] + i[3] + '00')
+        if citycode in codelist:
+            return True
+        return False
 
 if __name__ == '__main__':
-    with open(file='codetable.csv', mode='r') as f:
-        reader = csv.reader(f)
-        for i in reader:
-            print(i)
+    # with open(file='codetable.csv', mode='r') as f:
+    #     reader = csv.reader(f)
+    #     for i in reader:
+    #         print(i)
+    c = CodeTable()
+    print(c.varify_citycode('370000'))

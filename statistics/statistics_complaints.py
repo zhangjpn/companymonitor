@@ -2,7 +2,7 @@
 """投诉量/投诉率统计"""
 
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.base_class import CodeTable
 from app.commontools import create_day_list
 
@@ -14,10 +14,13 @@ def statistics_complaints(citycode):
 
     # 获取某个城市的投诉数据
     complaints = mongo_client.spv1.complaints.find()
-    target_complaints = [complaint for complaint in complaints if complaint.get('cityCode') == citycode]
+    target_complaints = []
+    for complaint in complaints:
+        complaint_citycode = complaint.get('cityCode')
+        if complaint_citycode is not None:
+            if str(int(complaint_citycode)) == citycode:
+                target_complaints.append(complaint)
 
-
-    #
     # 获取辖区列表
     province_code_abbr = citycode[0:2]
     city_code_abbr = citycode[2:4]
@@ -29,7 +32,7 @@ def statistics_complaints(citycode):
     for county_info in countylist:
         temp_complaint_list = []
         for tcomplaint in target_complaints:
-            if tcomplaint.get('countyCode') == county_info[1]:
+            if str(int(tcomplaint.get('countyCode'))) == county_info[1]:
                 temp_complaint_list.append(tcomplaint)
         area_relatived_complaints[(county_info[0], county_info[1])] = temp_complaint_list
 
@@ -38,7 +41,7 @@ def statistics_complaints(citycode):
         # 生成按照天的时间段
         def in_date(dayperiod, target_date):
             """根据日期判断一个日期是否在日期时间段内"""
-            if dayperiod[0] <= target_date < dayperiod[1]:
+            if dayperiod[0] - timedelta(hours=8) <= target_date < dayperiod[1] - timedelta(hours=8):
                 return True
             return False
 
@@ -49,9 +52,8 @@ def statistics_complaints(citycode):
                     'statsType': 1,  # 统计类型 1-按照分区
                     'cityCode': citycode,
                     'countyCode': k[1],  # 辖区代码
-                    'date': day[0],  # 唯一值
+                    'date': day[0],
                     'complaintQty': 0,  # 投诉量
-                    'maintenaceQty': 0,  # 维修量
                 }
                 print('按照日统计：', daily_data)
                 mongo_client.statistics.complaintsstatistics.replace_one(
@@ -68,18 +70,16 @@ def statistics_complaints(citycode):
                         'statsType': 1,  # 统计类型 1-按照分区
                         'cityCode': citycode,
                         'countyCode': k[1],  # 辖区代码
-                        'date': day[0],  # 唯一值
+                        'date': day[0],
                         'complaintQty': count,  # 投诉量
-                        'maintenaceQty': 0,  # 维修单量  # 问题
                     }
                 else:
                     daily_data = {
                         'statsType': 1,  # 统计类型 1-按照分区
                         'cityCode': citycode,
                         'countyCode': k[1],  # 辖区代码
-                        'date': day[0],  # 唯一值
+                        'date': day[0],
                         'complaintQty': 0,  # 投诉量
-                        'maintenaceQty': 0,  # 维修单量  # 问题
                     }
                 print('按照日统计：', daily_data)
                 mongo_client.statistics.complaintsstatistics.replace_one(

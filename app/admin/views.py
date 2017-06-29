@@ -280,9 +280,9 @@ def comments(dtype):
 def complaints():
     """统计一段时间内各辖区的投诉量"""
     # 参数处理
-    start = str_to_date(request.args.get('from'))
-    end = str_to_date(request.args.get('to'))
-    city_code = request.args.get('citycode', '371100')  # 城市编号，'00' 结尾
+    city_code = request.args.get('citycode')
+    if not city_code:
+        return jsonify({'code': '400'}), 400
     if not start and not end:
         start_date = end_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     elif start is None or end is None:
@@ -308,7 +308,7 @@ def complaints():
 
     # 数据重组
     rows = []
-    for record in active_records:  # {'date':xx,'activeCompanyIds':[{'_id':xx,'provinceCode':'','countyCode':''},{}]}
+    for record in active_records:
         # 对每天每个区域的活跃企业数量做统计
         for k in countylist:  # 计数初始化置成0
             k[2] = 0

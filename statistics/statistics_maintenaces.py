@@ -2,7 +2,7 @@
 """统计维修单"""
 
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.base_class import CodeTable
 from app.commontools import create_day_list
 
@@ -13,9 +13,12 @@ def statistics_maintenaces(citycode):
     today = datetime.today().strftime('%Y-%m-%d')
 
     # 获取某个城市的维修单数据
-    maintenaces = mongo_client.spv1.maintenaces.find()
-    target_maintenaces = [maintenace for maintenace in maintenaces if maintenace.get('cityCode') == citycode]
-
+    maintenaces = mongo_client.spv1.maintenaces.aggregate(
+        [{'$lookup': {'from': 'companies', 'localField': 'companyId', 'foreignField': '_id', 'as': 'company'}}])
+    target_maintenaces = []
+    for maintenace in maintenaces:
+        if str(int(maintenace.get('company')[0].get('cityCode'))) == citycode:
+            target_maintenaces.append(maintenace)
 
     # 获取辖区列表
     province_code_abbr = citycode[0:2]
@@ -28,7 +31,7 @@ def statistics_maintenaces(citycode):
     for county_info in countylist:
         temp_maintenace_list = []
         for tmaintenace in target_maintenaces:
-            if tmaintenace.get('countyCode') == county_info[1]:
+            if str(int(tmaintenace.get('company')[0].get('countyCode'))) == county_info[1]:
                 temp_maintenace_list.append(tmaintenace)
         area_relatived_maintenaces[(county_info[0], county_info[1])] = temp_maintenace_list
 
@@ -37,7 +40,7 @@ def statistics_maintenaces(citycode):
         # 生成按照天的时间段
         def in_date(dayperiod, target_date):
             """根据日期判断一个日期是否在日期时间段内"""
-            if dayperiod[0] <= target_date < dayperiod[1]:
+            if dayperiod[0] - timedelta(hours=8) <= target_date < dayperiod[1] - timedelta(hours=8):
                 return True
             return False
 
@@ -71,10 +74,10 @@ def statistics_maintenaces(citycode):
                     }
                 else:
                     daily_data = {
-                        'statsType': 1,  # 统计类型 1-按照分区
+                        'statsType': 1,  # 统计类型 1-按照分区统计
                         'cityCode': citycode,
                         'countyCode': k[1],  # 辖区代码
-                        'date': day[0],  # 唯一值
+                        'date': day[0],  # 日期
                         'maintenaceQty': 0,  # 维修单量  # 问题
                     }
                 print('按照日统计：', daily_data)

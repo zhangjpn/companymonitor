@@ -1,0 +1,11 @@
+# 统计定时任务
+# 执行命令用的shell
+SHELL=/bin/bash
+# 所执行命令的路径
+PATH=/home/zjp/PycharmProjects/venvfortest3.5/bin
+# 执行命令时的主目录
+HOME=/home/zjp/PycharmProjects/companymonitor
+# 定时任务
+0 3 * * * python statistics_script.py
+
+

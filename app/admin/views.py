@@ -276,8 +276,8 @@ def comments(dtype):
     return jsonify(res_data), 200
 
 
-@admin_bp.route(r'/commonapi/admin/statistics/complaints', methods=['GET'])
-def census_complaints():
+@admin_bp.route(r'/commonapi/admin/statistics/complaints/total', methods=['GET'])
+def complaints():
     """统计一段时间内各辖区的投诉量"""
     # 参数处理
     start = str_to_date(request.args.get('from'))

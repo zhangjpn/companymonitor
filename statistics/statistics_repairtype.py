@@ -35,6 +35,7 @@ def statistics_repairtype(citycode):
         ['汽车大修', 50],
         ['总成修理', 60],
         ['零件修理', 70],
+        ['其它', 90]
     ]
     # 按照维修类别分类评价数据
     repairtype_relatived_comments = {}

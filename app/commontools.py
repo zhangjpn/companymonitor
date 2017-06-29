@@ -2,8 +2,6 @@
 from datetime import datetime, timedelta
 import calendar
 
-from scripts.tz import UTC
-
 
 def create_week_list(start, end):
     """返回日期段内的周列表"""
@@ -69,6 +67,23 @@ def create_season_list(start, end):
         tempdate = start_season_day + timedelta(days=93)
         end_season_day = datetime(tempdate.year, month=tempdate.month, day=1, tzinfo=None) - timedelta(days=1)
     return season_range_list
+
+
+def create_day_list(start, end):
+    """生成日列表"""
+    startday = datetime.strptime(start, '%Y-%m-%d')
+    endday = datetime.strptime(end, '%Y-%m-%d')
+    res = []
+    # (a, b)
+    a = startday
+    b = a + timedelta(days=1)
+    while True:
+        if b > endday:
+            break
+        res.append((a, b))
+        a = b
+        b = a + timedelta(days=1)
+    return res
 
 
 def get_last_month_period(theday):
@@ -165,8 +180,12 @@ if __name__ == '__main__':
     # create_season_list('2016-06-09', '2017-07-04')
     # a, b = get_last_month_period(datetime.now())
     # print(a, b)
-    today = datetime.today()
+    # today = datetime.today()
     # theday = datetime.date(datetime(2017, 12, 31))
-    s,v = get_last_n_season_period(today, n=7)
-    print(s,v)
+    # s,v = get_last_n_season_period(today, n=7)
+    # print(s,v)
     # get_last_n_month_period(today)
+
+    res = create_day_list('2017-06-01', '2017-07-01')
+    for i in res:
+        print(i)

@@ -1,20 +1,28 @@
 # -*-coding:utf-8 -*-
 """统计维修单"""
 
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from datetime import datetime, timedelta
 from app.base_class import CodeTable
-from app.commontools import create_day_list
+from app.commontools import create_day_list, in_date
 
 
-def statistics_maintenaces(citycode):
-    """"""
+def statistics_maintenaces(citycode, startdate='2016-01-01'):
+    """
+
+    :param startdate: 统计开始的日期 '2016-01-01'
+    :param citycode: 城市代码
+    :return: None
+    """
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
     today = datetime.today().strftime('%Y-%m-%d')
 
     # 获取某个城市的维修单数据
     maintenaces = mongo_client.spv1.maintenaces.aggregate(
-        [{'$lookup': {'from': 'companies', 'localField': 'companyId', 'foreignField': '_id', 'as': 'company'}}])
+        [
+            {'$lookup': {'from': 'companies', 'localField': 'companyId', 'foreignField': '_id', 'as': 'company'}},
+            {'$project': {'_id': 0, 'company': 1}}
+        ])
     target_maintenaces = []
     for maintenace in maintenaces:
         if str(int(maintenace.get('company')[0].get('cityCode'))) == citycode:
@@ -38,26 +46,22 @@ def statistics_maintenaces(citycode):
     # 按照每天统计
     for k, v in area_relatived_maintenaces.items():
         # 生成按照天的时间段
-        def in_date(dayperiod, target_date):
-            """根据日期判断一个日期是否在日期时间段内"""
-            if dayperiod[0] - timedelta(hours=8) <= target_date < dayperiod[1] - timedelta(hours=8):
-                return True
-            return False
-
-        days = create_day_list('2015-12-01', today)
+        days = create_day_list(startdate, today)
         if len(v) == 0:  # 如果某个地区的投诉为0,则全部置为0
             for day in days:
                 daily_data = {
-                    'statsType': 1,  # 统计类型 1-按照分区
+                    'provinceCode': citycode[0:2] + '0000',
                     'cityCode': citycode,
                     'countyCode': k[1],  # 辖区代码
                     'date': day[0],
                     'maintenaceQty': 0,  # 维修量
                 }
-                print('按照日统计：', daily_data)
-                mongo_client.statistics.maintenacesstatistics.replace_one(
-                    {'cityCode': citycode, 'statsType': 1, 'date': day[0], 'countyCode': k[1]},
-                    daily_data, upsert=True)
+
+                updated_data = mongo_client.statistics.maintenacesstatistics.find_one_and_update(
+                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'countyCode': k[1]},
+                    {
+                        '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
+                print(updated_data)
         else:
             for day in days:
                 count = 0  # 记数
@@ -66,25 +70,25 @@ def statistics_maintenaces(citycode):
                         count += 1
                 if count > 0:
                     daily_data = {
-                        'statsType': 1,  # 统计类型 1-按照分区
+                        'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
                         'countyCode': k[1],  # 辖区代码
-                        'date': day[0],  # 唯一值
+                        'date': day[0],
                         'maintenaceQty': count,  # 维修单量
                     }
                 else:
                     daily_data = {
-                        'statsType': 1,  # 统计类型 1-按照分区统计
+                        'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
                         'countyCode': k[1],  # 辖区代码
-                        'date': day[0],  # 日期
-                        'maintenaceQty': 0,  # 维修单量  # 问题
+                        'date': day[0],
+                        'maintenaceQty': 0,  # 维修单量
                     }
-                print('按照日统计：', daily_data)
-                mongo_client.statistics.maintenacesstatistics.replace_one(
-                    {'cityCode': citycode, 'statsType': 1, 'date': day[0], 'countyCode': k[1]},
-                    daily_data, upsert=True)
-
+                updated_data = mongo_client.statistics.maintenacesstatistics.find_one_and_update(
+                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'countyCode': k[1]},
+                    {
+                        '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
+                print(updated_data)
 
 if __name__ == '__main__':
     statistics_maintenaces('371100')

@@ -4,6 +4,7 @@ from mongoengine import Document
 from mongoengine.fields import *
 from datetime import datetime
 
+
 class CommentsStatistics(Document):
     """评价统计"""
     meta = {
@@ -31,6 +32,7 @@ class CommentsStatistics(Document):
     satisfiedComments = IntField(default=None),  # 满意数
     satisfiactionRate = FloatField(default=None)  # 历史满意度
 
+
 class ComplaintsStatistics(Document):
     """评价统计"""
     meta = {
@@ -57,3 +59,14 @@ class ComplaintsStatistics(Document):
     commentsNum = IntField(default=None)  # 总评论
     satisfiedComments = IntField(default=None),  # 满意数
     satisfiactionRate = FloatField(default=None)  # 历史满意度
+
+
+class AreaStatistics(Document):
+    provinceCode = StringField(default=None)  # 省编号
+    cityCode = StringField(required=True)  # 城市编号
+    countyCode = StringField(required=True)  # 辖区编号
+    commentsQty = IntField(default=None)  # 评价数
+    satisfiedCommentsQty = IntField(default=None),  # 满意评价数
+    complaintQty = IntField(default=0),  # 满意评价数
+    maintenaceQty = IntField(default=0),  # 维修总量
+    date = DateTimeField()  # 日期

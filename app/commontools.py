@@ -3,11 +3,60 @@ from datetime import datetime, timedelta
 import calendar
 
 
+def str_to_date(string=None):
+    if not isinstance(string, str):
+        return None
+    string = string.strip()
+    try:
+        res = datetime.strptime(string, '%Y.%m.%d')
+        return res
+    except ValueError:
+        try:
+            res = datetime.strptime(string, '%Y-%m-%d')
+            return res
+        except ValueError:
+            pass
+    return None
+
+
+def in_date(dayperiod, target_date):
+    """根据日期判断一个日期是否在日期时间段内"""
+    if not target_date:
+        return False
+    if dayperiod[0] - timedelta(hours=8) <= target_date < dayperiod[1] - timedelta(hours=8):
+        return True
+    return False
+
+
+def in_week(weekperiod, target_date):
+    """根据日期判断一个日期是否在日期时间段内"""
+    if weekperiod[0] - timedelta(hours=8) <= target_date < (
+                    weekperiod[1] + timedelta(days=1) - timedelta(hours=8)):
+        return True
+    return False
+
+
+def in_month(monthperiod, target_date):
+    """根据日期判断一个日期是否在日期时间段内"""
+    if monthperiod[0] - timedelta(hours=8) <= target_date < (
+                    monthperiod[1] + timedelta(days=1) - timedelta(hours=8)):
+        return True
+    return False
+
+
+def in_season(seasonperiod, target_date):
+    """根据日期判断一个日期是否在日期时间段内"""
+    if seasonperiod[0] - timedelta(hours=8) <= target_date < (
+                    seasonperiod[1] + timedelta(days=1) - timedelta(hours=8)):
+        return True
+    return False
+
+
 def create_week_list(start, end):
     """返回日期段内的周列表"""
     startday = datetime.strptime(start, '%Y-%m-%d')
     temp = datetime.strptime(end, '%Y-%m-%d')
-    endday = datetime(temp.year,temp.month,temp.day,tzinfo=None)
+    endday = datetime(temp.year, temp.month, temp.day, tzinfo=None)
     bias = calendar.weekday(startday.year, startday.month, startday.day)
     start_week_day = datetime(startday.year, startday.month, startday.day, tzinfo=None) - timedelta(bias)
     week_range_list = []
@@ -146,7 +195,7 @@ def get_last_n_season_period(theday, n=7):
         start_season_day = datetime(theday.year - deltayear, mon, day=1, tzinfo=None)
         end_season_day = datetime(theday.year, 3, day=31, tzinfo=None)
     elif theday.month in [4, 5, 6]:
-        l = [7, 4, 1,10]
+        l = [7, 4, 1, 10]
         mon = l[n % 4]
         if n > 2:
             deltayear = (n - 1) // 6 + 1

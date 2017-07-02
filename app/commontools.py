@@ -19,6 +19,15 @@ def str_to_date(string=None):
     return None
 
 
+def in_period(period, target_date):
+    """判断某天是否存在于该时期内"""
+    if not target_date:
+        return False
+    if period[0] - timedelta(hours=8) <= target_date < period[1] - timedelta(hours=8):
+        return True
+    return False
+
+
 def in_date(dayperiod, target_date):
     """根据日期判断一个日期是否在日期时间段内"""
     if not target_date:
@@ -149,7 +158,7 @@ def get_last_month_period(theday):
 def get_last_n_month_period(theday, n=7):
     """获取过去n个月的时间段"""
     start = end = theday
-    if theday.month > n:
+    if theday.month >= n:
         start = datetime(theday.year, theday.month - n + 1, 1, tzinfo=None)
         if theday.month < 12:
             end = datetime(theday.year, theday.month + 1, 1, tzinfo=None) - timedelta(days=1)
@@ -229,12 +238,15 @@ if __name__ == '__main__':
     # create_season_list('2016-06-09', '2017-07-04')
     # a, b = get_last_month_period(datetime.now())
     # print(a, b)
-    # today = datetime.today()
+    today = datetime.today()
     # theday = datetime.date(datetime(2017, 12, 31))
     # s,v = get_last_n_season_period(today, n=7)
     # print(s,v)
-    # get_last_n_month_period(today)
-
-    res = create_day_list('2017-06-01', '2017-07-01')
-    for i in res:
+    start_trend_season_day, end_trend_season_day = get_last_n_season_period(today)
+    seasons = create_season_list(start_trend_season_day.strftime('%Y-%m-%d'),
+                                 end_trend_season_day.strftime('%Y-%m-%d'))
+    for i in seasons:
         print(i)
+        # res = create_day_list('2017-06-01', '2017-07-01')
+        # for i in res:
+        #     print(i)

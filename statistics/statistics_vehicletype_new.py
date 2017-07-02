@@ -1,14 +1,14 @@
-# -*-coding:utf-8 -*-
-"""统计维修单"""
+# -*-codint:utf-8 -*-# -*-coding:utf-8 -*-
+"""根据车辆类型对评论进行分车辆类型进行统计"""
 
 from pymongo import MongoClient, ReturnDocument
-from datetime import datetime
-from app.commontools import create_day_list, in_date
+from datetime import datetime, timedelta
+from app.commontools import create_week_list, create_month_list, create_season_list, create_day_list, in_date
 
 
-def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
+def statistics_vehicletype(citycode, startdate='2016-01-01'):
     """
-    根据评价所对应的车辆品牌分城市分品牌按天进行统计
+
     :param startdate: 统计开始的日期 '2016-01-01'
     :param citycode: 城市代码
     :return: None
@@ -16,41 +16,47 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
     mongo_client = MongoClient(host='127.0.0.1', port=27017)
     today = datetime.today().strftime('%Y-%m-%d')
 
+    # 获取所有评价
     comments = mongo_client.spv1.comments.aggregate(
-        [{'$match': {'status': 1}},
+        [{'$match': {'status': 1}},  # 过滤评论状态
          {'$lookup': {'from': 'companies', 'localField': 'company', 'foreignField': '_id',
-                      'as': 'companyInfo'}},
+                      'as': 'companyInfo'}},  # 获取城市代码
          {'$lookup': {'from': 'maintenaces', 'localField': 'maintenace', 'foreignField': '_id',
-                      'as': 'maintenaceInfo'}},
+                      'as': 'maintenaceInfo'}},  # 获取维修类型
          {'$project': {'_id': 0, 'companyInfo': 1, 'maintenaceInfo': 1, 'allComment': 1, 'serviceScore': 1,
                        'priceScore': 1, 'qualityScore': 1, 'envirScore': 1, 'efficiencyScore': 1}}
          ])
-    # 过滤目标城市的评价数据
+
+    # 过滤某个城市的维修单数据
     target_comments = []
     for comment in comments:
         if str(int(comment.get('companyInfo')[0].get('cityCode'))) == citycode:
             target_comments.append(comment)
 
-    # 获取所有车辆的品牌列表
-    vehiclebrandlist = mongo_client.spv1.maintenaces.distinct('vehicleBrand')
-
-    # 按照品牌分类评价数据
-    brand_relatived_comments = {}
-    for brand in vehiclebrandlist:
-        temp_comments_list = []
+    # 获取车辆类型列表
+    vehicletypelist = [
+        ['小型车', 1],
+        ['大中型客车', 2],
+        ['大型货车', 3],
+        ['其它', 9],
+    ]
+    # 按照车辆类型分类评价数据
+    vehicletype_relatived_comments = {}
+    for vehicletype_info in vehicletypelist:
+        temp_comment_list = []
         for tcomment in target_comments:
-            if str(tcomment.get('maintenaceInfo')[0].get('vehicleBrand')) == brand:
-                temp_comments_list.append(tcomment)
-                brand_relatived_comments[brand] = temp_comments_list
-    for k, v in brand_relatived_comments.items():
-        # 生成按照天的时间段
+            if int(tcomment.get('maintenaceInfo')[0].get('vehicleType')) == vehicletype_info[1]:
+                temp_comment_list.append(tcomment)
+        vehicletype_relatived_comments[(vehicletype_info[0], vehicletype_info[1])] = temp_comment_list
+    # 全部数据，按照车辆类型统计各项评价指标
+    for k, v in vehicletype_relatived_comments.items():
         days = create_day_list(startdate, today)
         if len(v) == 0:  # 如果某个地区的投诉为0,则全部置为0
             for day in days:
                 daily_data = {
                     'provinceCode': citycode[0:2] + '0000',
                     'cityCode': citycode,
-                    'vehicleBrand': k,  # 品牌
+                    'vehicleType': k[1],  # 车辆类型
                     'date': day[0],
                     'commentsQty': 0,  # 维修量
                     'satisfiedcommentsQty': 0,  # 满意评价数
@@ -61,8 +67,8 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     'envirScore': 0,
                     'efficiencyScore': 0,
                 }
-                mongo_client.statistics.vehiclebrand.find_one_and_update(
-                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'vehicleBrand': k},
+                mongo_client.statistics.vehicletype.find_one_and_update(
+                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'vehicleType': k[1]},
                     {
                         '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
         else:
@@ -93,7 +99,7 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     daily_data = {
                         'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
-                        'vehicleBrand': k,  # 品牌
+                        'vehicleType': k[1],  # 品牌
                         'date': day[0],
                         'commentsQty': comments_num,  # 维修量
                         'satisfiedcommentsQty': satisfied_num,  # 满意评价数
@@ -108,7 +114,7 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     daily_data = {
                         'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
-                        'vehicleBrand': k,  # 品牌
+                        'vehicleType': k[1],  # 品牌
                         'date': day[0],
                         'commentsQty': 0,  # 维修量
                         'satisfiedcommentsQty': 0,  # 满意评价数
@@ -119,13 +125,11 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                         'envirScore': 0,
                         'efficiencyScore': 0,
                     }
-                updated_data = mongo_client.statistics.vehiclebrand.find_one_and_update(
+                updated_data = mongo_client.statistics.vehicletype.find_one_and_update(
                     {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0],
-                     'vehicleBrand': k},
+                     'vehicleType': k[1]},
                     {
                         '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
                 print(updated_data)
-
-
 if __name__ == '__main__':
-    statistics_vehiclebrand('371100')
+    statistics_vehicletype('371100')

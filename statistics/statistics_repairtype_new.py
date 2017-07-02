@@ -1,14 +1,14 @@
 # -*-coding:utf-8 -*-
-"""统计维修单"""
+"""根据维修类别对评论进行分地区、分时期统计"""
 
-from pymongo import MongoClient, ReturnDocument
 from datetime import datetime
+from pymongo import MongoClient, ReturnDocument
 from app.commontools import create_day_list, in_date
 
 
-def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
+def statistics_repairtype(citycode, startdate='2016-01-01'):
     """
-    根据评价所对应的车辆品牌分城市分品牌按天进行统计
+    根据评价所对应的维修类别分城市分类别按天进行统计
     :param startdate: 统计开始的日期 '2016-01-01'
     :param citycode: 城市代码
     :return: None
@@ -20,10 +20,8 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
         [{'$match': {'status': 1}},
          {'$lookup': {'from': 'companies', 'localField': 'company', 'foreignField': '_id',
                       'as': 'companyInfo'}},
-         {'$lookup': {'from': 'maintenaces', 'localField': 'maintenace', 'foreignField': '_id',
-                      'as': 'maintenaceInfo'}},
-         {'$project': {'_id': 0, 'companyInfo': 1, 'maintenaceInfo': 1, 'allComment': 1, 'serviceScore': 1,
-                       'priceScore': 1, 'qualityScore': 1, 'envirScore': 1, 'efficiencyScore': 1}}
+         {'$project': {'_id': 0, 'companyInfo': 1, 'allComment': 1, 'serviceScore': 1,
+                       'repairType': 1, 'priceScore': 1, 'qualityScore': 1, 'envirScore': 1, 'efficiencyScore': 1}}
          ])
     # 过滤目标城市的评价数据
     target_comments = []
@@ -31,18 +29,27 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
         if str(int(comment.get('companyInfo')[0].get('cityCode'))) == citycode:
             target_comments.append(comment)
 
-    # 获取所有车辆的品牌列表
-    vehiclebrandlist = mongo_client.spv1.maintenaces.distinct('vehicleBrand')
-
-    # 按照品牌分类评价数据
-    brand_relatived_comments = {}
-    for brand in vehiclebrandlist:
-        temp_comments_list = []
+    # 获取维修类别列表
+    repairtypelist = [
+        ['日常维护', 10],
+        ['一级维护', 20],
+        ['二级维护', 30],
+        ['汽车小修', 40],
+        ['汽车大修', 50],
+        ['总成修理', 60],
+        ['零件修理', 70],
+        ['其它', 90]
+    ]
+    # 按照维修类别分类评价数据
+    repairtype_relatived_comments = {}
+    for repairtype_info in repairtypelist:
+        temp_comment_list = []
         for tcomment in target_comments:
-            if str(tcomment.get('maintenaceInfo')[0].get('vehicleBrand')) == brand:
-                temp_comments_list.append(tcomment)
-                brand_relatived_comments[brand] = temp_comments_list
-    for k, v in brand_relatived_comments.items():
+            if int(tcomment.get('repairType')) == repairtype_info[1]:
+                temp_comment_list.append(tcomment)
+        repairtype_relatived_comments[(repairtype_info[0], repairtype_info[1])] = temp_comment_list
+    # 全部数据，按照维修类别统计各项评价指标
+    for k, v in repairtype_relatived_comments.items():
         # 生成按照天的时间段
         days = create_day_list(startdate, today)
         if len(v) == 0:  # 如果某个地区的投诉为0,则全部置为0
@@ -50,10 +57,10 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                 daily_data = {
                     'provinceCode': citycode[0:2] + '0000',
                     'cityCode': citycode,
-                    'vehicleBrand': k,  # 品牌
+                    'repairType': k[1],
                     'date': day[0],
-                    'commentsQty': 0,  # 维修量
-                    'satisfiedcommentsQty': 0,  # 满意评价数
+                    'commentsQty': 0,
+                    'satisfiedcommentsQty': 0,
                     'allComment': 0,
                     'serviceScore': 0,
                     'priceScore': 0,
@@ -61,8 +68,8 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     'envirScore': 0,
                     'efficiencyScore': 0,
                 }
-                mongo_client.statistics.vehiclebrand.find_one_and_update(
-                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'vehicleBrand': k},
+                mongo_client.statistics.repairtype.find_one_and_update(
+                    {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0], 'repairType': k[1]},
                     {
                         '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
         else:
@@ -93,10 +100,10 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     daily_data = {
                         'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
-                        'vehicleBrand': k,  # 品牌
+                        'repairType': k[1],
                         'date': day[0],
-                        'commentsQty': comments_num,  # 维修量
-                        'satisfiedcommentsQty': satisfied_num,  # 满意评价数
+                        'commentsQty': comments_num,
+                        'satisfiedcommentsQty': satisfied_num,
                         'serviceScore': round(service_score / comments_num, 1),
                         'priceScore': round(price_score / comments_num, 1),
                         'qualityScore': round(quality_score / comments_num, 1),
@@ -108,10 +115,10 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     daily_data = {
                         'provinceCode': citycode[0:2] + '0000',
                         'cityCode': citycode,
-                        'vehicleBrand': k,  # 品牌
+                        'repairType': k[1],
                         'date': day[0],
-                        'commentsQty': 0,  # 维修量
-                        'satisfiedcommentsQty': 0,  # 满意评价数
+                        'commentsQty': 0,
+                        'satisfiedcommentsQty': 0,
                         'allComment': 0,
                         'serviceScore': 0,
                         'priceScore': 0,
@@ -121,11 +128,11 @@ def statistics_vehiclebrand(citycode, startdate='2016-01-01'):
                     }
                 updated_data = mongo_client.statistics.vehiclebrand.find_one_and_update(
                     {'cityCode': citycode, 'provinceCode': citycode[0:2] + '0000', 'date': day[0],
-                     'vehicleBrand': k},
+                     'repairType': k[1]},
                     {
                         '$set': daily_data}, upsert=True, return_document=ReturnDocument.AFTER)
                 print(updated_data)
 
 
 if __name__ == '__main__':
-    statistics_vehiclebrand('371100')
+    statistics_repairtype('371100', startdate='2015-09-09')

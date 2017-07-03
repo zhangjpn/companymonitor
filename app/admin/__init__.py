@@ -1,3 +1,6 @@
 # -*-coding:utf-8 -*-
+from flask import Blueprint
 
-from .views import admin_bp
+admin_bp = Blueprint('admin_bp', import_name=__name__)
+
+from . import views

@@ -1,4 +1,5 @@
 # -*-coding:utf-8 -*-
+import operator
 from datetime import datetime, timedelta
 import calendar
 
@@ -233,6 +234,33 @@ def get_last_n_season_period(theday, n=7):
         end_season_day = datetime(theday.year, 12, day=31, tzinfo=None)
     return start_season_day, end_season_day
 
+
+def trend_format_trans(trends, target_field_name, stats_info_list):
+    new_trends = []
+    for item in stats_info_list:
+        temp1 = []
+        # 过滤目标分类
+        for period in trends:
+            if period.get(target_field_name) == item[1]:
+                temp1.append(period)
+
+        s = sorted(temp1, key=operator.itemgetter('periodStart'))
+        satisfied_rate = []
+        period = []
+        for t in s:
+            p = t['periodStart'].strftime('%Y/%m/%d') + '-' + t['periodEnd'].strftime('%Y/%m/%d')
+            period.append(p)
+            if t['commentsQty'] > 0:
+                satisfied_rate.append(round(t['satisfiedcommentsQty'] / t['commentsQty'], 3))
+            else:
+                satisfied_rate.append(0)
+        d = {
+            target_field_name: item[1],
+            'satisfiedRate': satisfied_rate,
+            'period': period,
+        }
+        new_trends.append(d)
+    return new_trends
 
 if __name__ == '__main__':
     # create_season_list('2016-06-09', '2017-07-04')

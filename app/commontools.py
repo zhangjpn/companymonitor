@@ -21,7 +21,10 @@ def str_to_date(string=None):
 
 
 def in_period(period, target_date):
-    """判断某天是否存在于该时期内"""
+    """判断某天是否存在于该时期内
+    :param period (datetime, datetime)
+    :param target_date datetime
+    """
     if not target_date:
         return False
     if period[0] - timedelta(hours=8) <= target_date < period[1] - timedelta(hours=8):
@@ -261,7 +264,32 @@ def trend_format_trans(trends, target_field_name, stats_info_list):
         }
         new_trends.append(d)
     return new_trends
+def trend_format_trans_complaint(trends, target_field_name, stats_info_list):
+    new_trends = []
+    for item in stats_info_list:
+        temp1 = []
+        # 过滤目标分类
+        for period in trends:
+            if period.get(target_field_name) == item[1]:
+                temp1.append(period)
 
+        s = sorted(temp1, key=operator.itemgetter('periodStart'))
+        complaint_rate = []
+        period = []
+        for t in s:
+            p = t['periodStart'].strftime('%Y/%m/%d') + '-' + t['periodEnd'].strftime('%Y/%m/%d')
+            period.append(p)
+            if t['maintenaceQty'] > 0:
+                complaint_rate.append(round(t['complaintQty'] / t['maintenaceQty'], 3))
+            else:
+                complaint_rate.append(0)
+        d = {
+            target_field_name: item[1],
+            'complaintRate': complaint_rate,
+            'period': period,
+        }
+        new_trends.append(d)
+    return new_trends
 if __name__ == '__main__':
     # create_season_list('2016-06-09', '2017-07-04')
     # a, b = get_last_month_period(datetime.now())
